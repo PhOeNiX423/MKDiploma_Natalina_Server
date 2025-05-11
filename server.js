@@ -88,7 +88,7 @@ const Order = mongoose.model("Order", OrderSchema, "Orders");
 
 // ===================== ЭНДПОИНТЫ =====================
 
-// 🔹 Получить все продукты
+// 🔹 Все продукты
 app.get("/products", async (req, res) => {
   try {
     const products = await Product.find();
@@ -98,7 +98,7 @@ app.get("/products", async (req, res) => {
   }
 });
 
-// 🔹 Получить продукт по ID
+// 🔹 Один продукт
 app.get("/products/:id", async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
@@ -109,7 +109,17 @@ app.get("/products/:id", async (req, res) => {
   }
 });
 
-// 🔹 Получить отзывы по product_id
+// 🔹 Все отзывы
+app.get("/reviews", async (req, res) => {
+  try {
+    const reviews = await Review.find();
+    res.json(reviews);
+  } catch (error) {
+    res.status(500).json({ message: "Ошибка при получении отзывов", error });
+  }
+});
+
+// 🔹 Отзывы по товару
 app.get("/reviews/:productId", async (req, res) => {
   try {
     const reviews = await Review.find({ product_id: req.params.productId });
@@ -119,33 +129,11 @@ app.get("/reviews/:productId", async (req, res) => {
   }
 });
 
-// 🔹 Получить пользователя по ID
-app.get("/users/:userId", async (req, res) => {
-  try {
-    const user = await User.findById(req.params.userId);
-    if (!user) return res.status(404).json({ message: "Пользователь не найден" });
-    res.json(user);
-  } catch (error) {
-    res.status(500).json({ message: "Ошибка при получении пользователя", error });
-  }
-});
-
-// 🔹 Получить заказы пользователя
-app.get("/orders/:userId", async (req, res) => {
-  try {
-    const orders = await Order.find({ user_id: req.params.userId });
-    res.json(orders);
-  } catch (error) {
-    res.status(500).json({ message: "Ошибка при получении заказов", error });
-  }
-});
-
-// 🔹 Добавить новый отзыв и пересчитать рейтинг
+// 🔹 Добавить отзыв и обновить рейтинг
 app.post("/reviews", async (req, res) => {
   try {
     const { product_id, user_id, rating, comment } = req.body;
 
-    // Сохраняем отзыв
     const newReview = await Review.create({
       product_id,
       user_id,
@@ -153,7 +141,6 @@ app.post("/reviews", async (req, res) => {
       comment,
     });
 
-    // Обновляем средний рейтинг и количество оценок
     const product = await Product.findById(product_id);
     if (!product) {
       return res.status(404).json({ message: "Продукт не найден" });
@@ -173,6 +160,47 @@ app.post("/reviews", async (req, res) => {
     res.status(201).json({ message: "Отзыв добавлен", review: newReview });
   } catch (error) {
     res.status(500).json({ message: "Ошибка при добавлении отзыва", error });
+  }
+});
+
+// 🔹 Все пользователи
+app.get("/users", async (req, res) => {
+  try {
+    const users = await User.find();
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: "Ошибка при получении пользователей", error });
+  }
+});
+
+// 🔹 Один пользователь
+app.get("/users/:userId", async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId);
+    if (!user) return res.status(404).json({ message: "Пользователь не найден" });
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: "Ошибка при получении пользователя", error });
+  }
+});
+
+// 🔹 Все заказы
+app.get("/orders", async (req, res) => {
+  try {
+    const orders = await Order.find();
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ message: "Ошибка при получении заказов", error });
+  }
+});
+
+// 🔹 Заказы конкретного пользователя
+app.get("/orders/:userId", async (req, res) => {
+  try {
+    const orders = await Order.find({ user_id: req.params.userId });
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ message: "Ошибка при получении заказов пользователя", error });
   }
 });
 
