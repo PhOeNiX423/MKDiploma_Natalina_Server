@@ -6,31 +6,89 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Подключение к MongoDB Atlas
+// Подключение к MongoDB
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });
 
-// Схема продукта
+// ===================== СХЕМЫ И МОДЕЛИ =====================
+
+// ✅ Продукты
 const ProductSchema = new mongoose.Schema({
   title: String,
+  product_line: String,
+  item_code: String,
   price: Number,
   description: String,
   ingredients: String,
-  f_category: String,
-  s_category: String,
-  t_category: [String],
-  images: [String],
-  value: Number,
+  category: String,
+  target_area: String,
+  tags: [String],
+  value: String,
   value_descriptor: String,
-  rating: Number,
+  images: [String],
+  average_rating: Number,
+  ratings_count: Number,
 });
 
-// Модель
 const Product = mongoose.model("Product", ProductSchema, "Products");
 
-// Эндпоинт для получения всех товаров
+// ✅ Отзывы
+const ReviewSchema = new mongoose.Schema({
+  product_id: mongoose.Schema.Types.ObjectId,
+  user_id: mongoose.Schema.Types.ObjectId,
+  rating: Number,
+  comment: String,
+  created_at: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
+const Review = mongoose.model("Review", ReviewSchema, "Reviews");
+
+// ✅ Пользователи
+const UserSchema = new mongoose.Schema({
+  email: String,
+  password_hash: String,
+  name: String,
+  created_at: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
+const User = mongoose.model("User", UserSchema, "Users");
+
+// ✅ Заказы
+const OrderSchema = new mongoose.Schema({
+  user_id: mongoose.Schema.Types.ObjectId,
+  products: [
+    {
+      product_id: mongoose.Schema.Types.ObjectId,
+      title: String,
+      quantity: Number,
+      price: Number,
+    },
+  ],
+  total_amount: Number,
+  status: String,
+  created_at: {
+    type: Date,
+    default: Date.now,
+  },
+  city: String,
+  district: String,
+  metro: String,
+  comment: String,
+});
+
+const Order = mongoose.model("Order", OrderSchema, "Orders");
+
+// ===================== ЭНДПОИНТЫ =====================
+
+// 🔹 Получить все продукты
 app.get("/products", async (req, res) => {
   try {
     const products = await Product.find();
@@ -40,7 +98,85 @@ app.get("/products", async (req, res) => {
   }
 });
 
-// Запуск сервера
+// 🔹 Получить продукт по ID
+app.get("/products/:id", async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) return res.status(404).json({ message: "Товар не найден" });
+    res.json(product);
+  } catch (error) {
+    res.status(500).json({ message: "Ошибка при получении товара", error });
+  }
+});
+
+// 🔹 Получить отзывы по product_id
+app.get("/reviews/:productId", async (req, res) => {
+  try {
+    const reviews = await Review.find({ product_id: req.params.productId });
+    res.json(reviews);
+  } catch (error) {
+    res.status(500).json({ message: "Ошибка при получении отзывов", error });
+  }
+});
+
+// 🔹 Получить пользователя по ID
+app.get("/users/:userId", async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId);
+    if (!user) return res.status(404).json({ message: "Пользователь не найден" });
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: "Ошибка при получении пользователя", error });
+  }
+});
+
+// 🔹 Получить заказы пользователя
+app.get("/orders/:userId", async (req, res) => {
+  try {
+    const orders = await Order.find({ user_id: req.params.userId });
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ message: "Ошибка при получении заказов", error });
+  }
+});
+
+// 🔹 Добавить новый отзыв и пересчитать рейтинг
+app.post("/reviews", async (req, res) => {
+  try {
+    const { product_id, user_id, rating, comment } = req.body;
+
+    // Сохраняем отзыв
+    const newReview = await Review.create({
+      product_id,
+      user_id,
+      rating,
+      comment,
+    });
+
+    // Обновляем средний рейтинг и количество оценок
+    const product = await Product.findById(product_id);
+    if (!product) {
+      return res.status(404).json({ message: "Продукт не найден" });
+    }
+
+    const totalRatings = product.ratings_count || 0;
+    const currentAvg = product.average_rating || 0;
+
+    const newCount = totalRatings + 1;
+    const newAvg = ((currentAvg * totalRatings + rating) / newCount).toFixed(2);
+
+    product.ratings_count = newCount;
+    product.average_rating = parseFloat(newAvg);
+
+    await product.save();
+
+    res.status(201).json({ message: "Отзыв добавлен", review: newReview });
+  } catch (error) {
+    res.status(500).json({ message: "Ошибка при добавлении отзыва", error });
+  }
+});
+
+// ===================== ЗАПУСК СЕРВЕРА =====================
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Сервер работает на порту ${PORT}`);
