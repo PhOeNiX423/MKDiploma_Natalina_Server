@@ -1,6 +1,7 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const bcrypt = require("bcryptjs");
 
 const app = express();
 app.use(cors());
@@ -50,9 +51,13 @@ const Review = mongoose.model("Review", ReviewSchema, "Reviews");
 
 // ✅ Пользователи
 const UserSchema = new mongoose.Schema({
-  email: String,
+  login: String,
   password_hash: String,
   name: String,
+  role: {
+    type: String,
+    default: "user", // ← по умолчанию
+  },
   created_at: {
     type: Date,
     default: Date.now,
@@ -201,6 +206,34 @@ app.get("/orders/:userId", async (req, res) => {
     res.json(orders);
   } catch (error) {
     res.status(500).json({ message: "Ошибка при получении заказов пользователя", error });
+  }
+});
+
+// 🔹 Авторизация в системе
+app.post("/users/login", async (req, res) => {
+  const { login, password } = req.body;
+
+  try {
+    const user = await User.findOne({ login });
+
+    if (!user) {
+      return res.status(401).json({ message: "Пользователь не найден" });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password_hash);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Неверный пароль" });
+    }
+
+    // Не возвращаем пароль
+    res.json({
+      login: user.login,
+      name: user.name,
+      role: user.role,
+    });
+  } catch (error) {
+    console.error("Ошибка при входе:", error);
+    res.status(500).json({ message: "Внутренняя ошибка сервера" });
   }
 });
 
