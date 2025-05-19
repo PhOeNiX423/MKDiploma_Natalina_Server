@@ -4,7 +4,13 @@ const cors = require("cors");
 const bcrypt = require("bcryptjs");
 
 const app = express();
-app.use(cors());
+
+app.use(cors({
+  origin: ["http://localhost:3000", "https://mkdiploma-natalina.vercel.app"], // ← список разрешённых источников
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type"],
+}));
+
 app.use(express.json());
 
 // Подключение к MongoDB
