@@ -60,6 +60,7 @@ const UserSchema = new mongoose.Schema({
   login: String,
   password_hash: String,
   name: String,
+  phone: String,
   role: {
     type: String,
     default: "user", // ← по умолчанию
