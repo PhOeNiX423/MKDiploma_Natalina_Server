@@ -137,10 +137,16 @@ app.get("/reviews/:productId", async (req, res) => {
 // 🔹 Отзывы конкретного пользователя
 app.get("/reviews/user/:userId", async (req, res) => {
   try {
-    const userId = mongoose.Types.ObjectId(req.params.userId);
-    const reviews = await Review.find({ user_id: userId });
+    const { userId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: "Неверный формат userId" });
+    }
+
+    const reviews = await Review.find({ user_id: new mongoose.Types.ObjectId(userId) });
     res.json(reviews);
   } catch (error) {
+    console.error("Ошибка при получении отзывов пользователя:", error);
     res.status(500).json({ message: "Ошибка при получении отзывов пользователя", error });
   }
 });
