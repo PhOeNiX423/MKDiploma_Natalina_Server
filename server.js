@@ -5,11 +5,13 @@ const bcrypt = require("bcryptjs");
 
 const app = express();
 
-app.use(cors({
-  origin: ["http://localhost:3000", "https://mkdiploma-natalina.vercel.app"], // ← список разрешённых источников
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  allowedHeaders: ["Content-Type"],
-}));
+app.use(
+  cors({
+    origin: ["http://localhost:3000", "https://mkdiploma-natalina.vercel.app"], // ← список разрешённых источников
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type"],
+  })
+);
 
 app.use(express.json());
 
@@ -56,50 +58,56 @@ const ReviewSchema = new mongoose.Schema({
 const Review = mongoose.model("Review", ReviewSchema, "Reviews");
 
 // ✅ Пользователи
-const UserSchema = new mongoose.Schema({
-  password_hash: String,
-  name: String,
-  phone: {
-    type: String,
-    required: true,
-    unique: true,
+const UserSchema = new mongoose.Schema(
+  {
+    password_hash: String,
+    name: String,
+    phone: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+    role: {
+      type: String,
+      default: "user", // ← по умолчанию
+    },
+    created_at: {
+      type: Date,
+      default: Date.now,
+    },
   },
-  role: {
-    type: String,
-    default: "user", // ← по умолчанию
-  },
-  created_at: {
-    type: Date,
-    default: Date.now,
-  },
-}, { versionKey: false });;
+  { versionKey: false }
+);
 
 const User = mongoose.model("User", UserSchema, "Users");
 
 // ✅ Заказы
-const OrderSchema = new mongoose.Schema({
-  user_id: mongoose.Schema.Types.ObjectId,
-  name: String,
-  phone: String,
-  products: [
-    {
-      product_id: mongoose.Schema.Types.ObjectId,
-      title: String,
-      quantity: Number,
-      price: Number,
+const OrderSchema = new mongoose.Schema(
+  {
+    user_id: mongoose.Schema.Types.ObjectId,
+    name: String,
+    phone: String,
+    products: [
+      {
+        product_id: mongoose.Schema.Types.ObjectId,
+        title: String,
+        quantity: Number,
+        price: Number,
+      },
+    ],
+    total_amount: Number,
+    status: String,
+    created_at: {
+      type: Date,
+      default: Date.now,
     },
-  ],
-  total_amount: Number,
-  status: String,
-  created_at: {
-    type: Date,
-    default: Date.now,
+    city: String,
+    district: String,
+    metro: String,
+    comment: String,
   },
-  city: String,
-  district: String,
-  metro: String,
-  comment: String,
-}, { versionKey: false });
+  { versionKey: false }
+);
 
 const Order = mongoose.model("Order", OrderSchema, "Orders");
 
@@ -155,11 +163,15 @@ app.get("/reviews/user/:userId", async (req, res) => {
       return res.status(400).json({ message: "Неверный формат userId" });
     }
 
-    const reviews = await Review.find({ user_id: new mongoose.Types.ObjectId(userId) });
+    const reviews = await Review.find({
+      user_id: new mongoose.Types.ObjectId(userId),
+    });
     res.json(reviews);
   } catch (error) {
     console.error("Ошибка при получении отзывов пользователя:", error);
-    res.status(500).json({ message: "Ошибка при получении отзывов пользователя", error });
+    res
+      .status(500)
+      .json({ message: "Ошибка при получении отзывов пользователя", error });
   }
 });
 
@@ -171,7 +183,9 @@ app.post("/reviews", async (req, res) => {
     // Проверка, что отзыв от этого пользователя на этот товар уже существует
     const existingReview = await Review.findOne({ product_id, user_id });
     if (existingReview) {
-      return res.status(400).json({ message: "Вы уже оставили отзыв для этого товара" });
+      return res
+        .status(400)
+        .json({ message: "Вы уже оставили отзыв для этого товара" });
     }
 
     const newReview = await Review.create({
@@ -203,14 +217,15 @@ app.post("/reviews", async (req, res) => {
   }
 });
 
-
 // 🔹 Все пользователи
 app.get("/users", async (req, res) => {
   try {
     const users = await User.find();
     res.json(users);
   } catch (error) {
-    res.status(500).json({ message: "Ошибка при получении пользователей", error });
+    res
+      .status(500)
+      .json({ message: "Ошибка при получении пользователей", error });
   }
 });
 
@@ -218,10 +233,13 @@ app.get("/users", async (req, res) => {
 app.get("/users/:userId", async (req, res) => {
   try {
     const user = await User.findById(req.params.userId);
-    if (!user) return res.status(404).json({ message: "Пользователь не найден" });
+    if (!user)
+      return res.status(404).json({ message: "Пользователь не найден" });
     res.json(user);
   } catch (error) {
-    res.status(500).json({ message: "Ошибка при получении пользователя", error });
+    res
+      .status(500)
+      .json({ message: "Ошибка при получении пользователя", error });
   }
 });
 
@@ -241,7 +259,9 @@ app.get("/orders/:userId", async (req, res) => {
     const orders = await Order.find({ user_id: req.params.userId });
     res.json(orders);
   } catch (error) {
-    res.status(500).json({ message: "Ошибка при получении заказов пользователя", error });
+    res
+      .status(500)
+      .json({ message: "Ошибка при получении заказов пользователя", error });
   }
 });
 
@@ -274,16 +294,18 @@ app.post("/users/login", async (req, res) => {
   const { phone, password } = req.body;
 
   try {
-    // 🔧 Удаляем всё, кроме цифр, и приводим к +7XXXXXXXXXX
+    console.log("📥 Пришло с клиента:", phone, password);
+
     const cleanPhone = "+7" + phone.replace(/\D/g, "").slice(-10);
 
-    console.log("📞 Чистый номер:", cleanPhone);
+    console.log("📞 Приведённый номер:", cleanPhone);
 
     const user = await User.findOne({ phone: cleanPhone });
-    console.log("🔍 Найденный пользователь:", user);
-
+    console.log("👤 Найденный пользователь:", user);
     if (!user) {
-      return res.status(401).json({ message: "Пользователь с таким номером не найден" });
+      return res
+        .status(401)
+        .json({ message: "Пользователь с таким номером не найден" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password_hash);
@@ -343,11 +365,4 @@ app.post("/users/check-phone", async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: "Ошибка при проверке номера", error });
   }
-});
-
-
-// ===================== ЗАПУСК СЕРВЕРА =====================
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Сервер работает на порту ${PORT}`);
 });
