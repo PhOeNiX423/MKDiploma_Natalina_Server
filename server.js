@@ -139,6 +139,12 @@ app.post("/reviews", async (req, res) => {
   try {
     const { product_id, user_id, rating, comment } = req.body;
 
+    // Проверка, что отзыв от этого пользователя на этот товар уже существует
+    const existingReview = await Review.findOne({ product_id, user_id });
+    if (existingReview) {
+      return res.status(400).json({ message: "Вы уже оставили отзыв для этого товара" });
+    }
+
     const newReview = await Review.create({
       product_id,
       user_id,
@@ -167,6 +173,7 @@ app.post("/reviews", async (req, res) => {
     res.status(500).json({ message: "Ошибка при добавлении отзыва", error });
   }
 });
+
 
 // 🔹 Все пользователи
 app.get("/users", async (req, res) => {
@@ -206,6 +213,16 @@ app.get("/orders/:userId", async (req, res) => {
     res.json(orders);
   } catch (error) {
     res.status(500).json({ message: "Ошибка при получении заказов пользователя", error });
+  }
+});
+
+// 🔹 Отзывы конкретного пользователя
+app.get("/reviews/:userId", async (req, res) => {
+  try {
+    const reviews = await Review.find({ user_id: req.params.userId });
+    res.json(reviews);
+  } catch (error) {
+    res.status(500).json({ message: "Ошибка при получении отзывов", error });
   }
 });
 
