@@ -134,6 +134,17 @@ app.get("/reviews/:productId", async (req, res) => {
   }
 });
 
+// 🔹 Отзывы конкретного пользователя
+app.get("/reviews/:userId", async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const reviews = await Review.find({ user_id: userId });
+    res.json(reviews);
+  } catch (error) {
+    res.status(500).json({ message: "Ошибка при получении отзывов", error });
+  }
+});
+
 // 🔹 Добавить отзыв и обновить рейтинг
 app.post("/reviews", async (req, res) => {
   try {
@@ -213,17 +224,6 @@ app.get("/orders/:userId", async (req, res) => {
     res.json(orders);
   } catch (error) {
     res.status(500).json({ message: "Ошибка при получении заказов пользователя", error });
-  }
-});
-
-// 🔹 Отзывы конкретного пользователя
-app.get("/reviews/:userId", async (req, res) => {
-  try {
-    const userId = mongoose.Types.ObjectId(req.params.userId);
-    const reviews = await Review.find({ user_id: userId });
-    res.json(reviews);
-  } catch (error) {
-    res.status(500).json({ message: "Ошибка при получении отзывов", error });
   }
 });
 
