@@ -274,20 +274,23 @@ app.post("/users/login", async (req, res) => {
   const { phone, password } = req.body;
 
   try {
-    // Ищем пользователя по номеру телефона
-    const user = await User.findOne({ phone });
+    // 🔧 Удаляем всё, кроме цифр, и приводим к +7XXXXXXXXXX
+    const cleanPhone = "+7" + phone.replace(/\D/g, "").slice(-10);
+
+    console.log("📞 Чистый номер:", cleanPhone);
+
+    const user = await User.findOne({ phone: cleanPhone });
+    console.log("🔍 Найденный пользователь:", user);
 
     if (!user) {
       return res.status(401).json({ message: "Пользователь с таким номером не найден" });
     }
 
-    // Проверяем пароль
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
       return res.status(401).json({ message: "Неверный пароль" });
     }
 
-    // Успешный вход — возвращаем необходимые поля (без пароля)
     res.json({
       _id: user._id,
       name: user.name,
