@@ -233,6 +233,16 @@ app.get("/orders/:userId", async (req, res) => {
   }
 });
 
+// 🔹 Создание нового заказа
+app.post("/orders", async (req, res) => {
+  try {
+    const order = await Order.create(req.body);
+    res.status(201).json(order);
+  } catch (error) {
+    res.status(500).json({ message: "Ошибка при создании заказа", error });
+  }
+});
+
 // 🔹 Авторизация в системе
 app.post("/users/login", async (req, res) => {
   const { login, password } = req.body;
