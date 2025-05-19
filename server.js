@@ -75,6 +75,8 @@ const User = mongoose.model("User", UserSchema, "Users");
 // ✅ Заказы
 const OrderSchema = new mongoose.Schema({
   user_id: mongoose.Schema.Types.ObjectId,
+  name: String,
+  phone: String,
   products: [
     {
       product_id: mongoose.Schema.Types.ObjectId,
