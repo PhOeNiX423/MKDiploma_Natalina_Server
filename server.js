@@ -57,10 +57,13 @@ const Review = mongoose.model("Review", ReviewSchema, "Reviews");
 
 // ✅ Пользователи
 const UserSchema = new mongoose.Schema({
-  login: String,
   password_hash: String,
   name: String,
-  phone: String,
+  phone: {
+    type: String,
+    required: true,
+    unique: true,
+  },
   role: {
     type: String,
     default: "user", // ← по умолчанию
@@ -254,24 +257,25 @@ app.post("/orders", async (req, res) => {
 
 // 🔹 Авторизация в системе
 app.post("/users/login", async (req, res) => {
-  const { login, password } = req.body;
+  const { phone, password } = req.body;
 
   try {
-    const user = await User.findOne({ login });
+    // Ищем пользователя по номеру телефона
+    const user = await User.findOne({ phone });
 
     if (!user) {
-      return res.status(401).json({ message: "Пользователь не найден" });
+      return res.status(401).json({ message: "Пользователь с таким номером не найден" });
     }
 
+    // Проверяем пароль
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
       return res.status(401).json({ message: "Неверный пароль" });
     }
 
-    // Не возвращаем пароль
+    // Успешный вход — возвращаем необходимые поля (без пароля)
     res.json({
       _id: user._id,
-      login: user.login,
       name: user.name,
       phone: user.phone,
       role: user.role,
