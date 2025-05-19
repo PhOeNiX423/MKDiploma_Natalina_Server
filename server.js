@@ -68,7 +68,7 @@ const UserSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
-});
+}, { versionKey: false });;
 
 const User = mongoose.model("User", UserSchema, "Users");
 
@@ -93,7 +93,7 @@ const OrderSchema = new mongoose.Schema({
   district: String,
   metro: String,
   comment: String,
-});
+}, { versionKey: false });
 
 const Order = mongoose.model("Order", OrderSchema, "Orders");
 
