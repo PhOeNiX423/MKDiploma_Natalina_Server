@@ -366,3 +366,9 @@ app.post("/users/check-phone", async (req, res) => {
     res.status(500).json({ message: "Ошибка при проверке номера", error });
   }
 });
+
+// ===================== ЗАПУСК СЕРВЕРА =====================
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Сервер работает на порту ${PORT}`);
+});
