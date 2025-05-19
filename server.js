@@ -316,6 +316,36 @@ app.get("/users/:phone", async (req, res) => {
   }
 });
 
+// 🔹 Проверка соответствия имени и номера
+app.post("/users/check-phone", async (req, res) => {
+  let { phone, name } = req.body;
+
+  // 🔧 Приведение телефона к формату +7XXXXXXXXXX
+  phone = "+7" + phone.replace(/\D/g, "").slice(-10);
+
+  try {
+    const user = await User.findOne({ phone });
+    if (!user) {
+      return res.json({ exists: false });
+    }
+
+    const isNameMatch =
+      user.name.trim().toLowerCase() === name.trim().toLowerCase();
+
+    if (!isNameMatch) {
+      return res.status(409).json({
+        message:
+          "Номер телефона уже зарегистрирован с другим именем. Пожалуйста, авторизуйтесь.",
+      });
+    }
+
+    res.json({ exists: true, matched: true });
+  } catch (error) {
+    res.status(500).json({ message: "Ошибка при проверке номера", error });
+  }
+});
+
+
 // ===================== ЗАПУСК СЕРВЕРА =====================
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
