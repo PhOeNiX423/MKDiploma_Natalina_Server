@@ -135,13 +135,13 @@ app.get("/reviews/:productId", async (req, res) => {
 });
 
 // 🔹 Отзывы конкретного пользователя
-app.get("/reviews/:userId", async (req, res) => {
+app.get("/reviews/user/:userId", async (req, res) => {
   try {
-    const userId = req.params.userId;
+    const userId = mongoose.Types.ObjectId(req.params.userId);
     const reviews = await Review.find({ user_id: userId });
     res.json(reviews);
   } catch (error) {
-    res.status(500).json({ message: "Ошибка при получении отзывов", error });
+    res.status(500).json({ message: "Ошибка при получении отзывов пользователя", error });
   }
 });
 
