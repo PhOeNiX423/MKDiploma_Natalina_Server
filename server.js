@@ -272,6 +272,7 @@ app.post("/users/login", async (req, res) => {
       _id: user._id,
       login: user.login,
       name: user.name,
+      phone: user.phone,
       role: user.role,
     });
   } catch (error) {
