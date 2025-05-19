@@ -248,7 +248,21 @@ app.get("/orders/:userId", async (req, res) => {
 // 🔹 Создание нового заказа
 app.post("/orders", async (req, res) => {
   try {
-    const order = await Order.create(req.body);
+    let userId = null;
+
+    // Если есть phone — ищем пользователя с таким номером
+    if (req.body.phone) {
+      const existingUser = await User.findOne({ phone: req.body.phone });
+      if (existingUser) {
+        userId = existingUser._id;
+      }
+    }
+
+    const order = await Order.create({
+      ...req.body,
+      user_id: userId, // ← либо найденный, либо null
+    });
+
     res.status(201).json(order);
   } catch (error) {
     res.status(500).json({ message: "Ошибка при создании заказа", error });
@@ -283,6 +297,19 @@ app.post("/users/login", async (req, res) => {
   } catch (error) {
     console.error("Ошибка при входе:", error);
     res.status(500).json({ message: "Внутренняя ошибка сервера" });
+  }
+});
+
+// 🔹 Пользователи по номеру телефона
+app.get("/users/:phone", async (req, res) => {
+  try {
+    const user = await User.findOne({ phone: req.params.phone });
+    if (!user) {
+      return res.status(404).json({ exists: false });
+    }
+    res.json({ exists: true, name: user.name });
+  } catch (error) {
+    res.status(500).json({ message: "Ошибка при поиске пользователя", error });
   }
 });
 
