@@ -244,6 +244,7 @@ app.post("/users/login", async (req, res) => {
 
     // Не возвращаем пароль
     res.json({
+      _id: user._id,
       login: user.login,
       name: user.name,
       role: user.role,
