@@ -421,6 +421,16 @@ app.delete("/users/:userId", async (req, res) => {
   }
 });
 
+// 🔹 Обновление заказа
+app.put("/orders/:id", async (req, res) => {
+  try {
+    const updated = await Order.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!updated) return res.status(404).json({ message: "Заказ не найден" });
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ message: "Ошибка при обновлении заказа", error });
+  }
+});
 
 // ===================== ЗАПУСК СЕРВЕРА =====================
 const PORT = process.env.PORT || 5000;
