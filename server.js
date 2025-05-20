@@ -85,6 +85,7 @@ const User = mongoose.model("User", UserSchema, "Users");
 const OrderSchema = new mongoose.Schema(
   {
     user_id: mongoose.Schema.Types.ObjectId,
+    consultant_id: String,
     name: String,
     phone: String,
     products: [
