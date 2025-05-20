@@ -294,14 +294,10 @@ app.post("/users/login", async (req, res) => {
   const { phone, password } = req.body;
 
   try {
-    console.log("📥 Пришло с клиента:", phone, password);
-
     const cleanPhone = "+7" + phone.replace(/\D/g, "").slice(-10);
 
-    console.log("📞 Приведённый номер:", cleanPhone);
-
     const user = await User.findOne({ phone: cleanPhone });
-    console.log("👤 Найденный пользователь:", user);
+
     if (!user) {
       return res
         .status(401)
@@ -326,7 +322,7 @@ app.post("/users/login", async (req, res) => {
 });
 
 // 🔹 Пользователи по номеру телефона
-app.get("/users/:phone", async (req, res) => {
+app.get("/users/phone/:phone", async (req, res) => {
   try {
     const user = await User.findOne({ phone: req.params.phone });
     if (!user) {
@@ -366,6 +362,65 @@ app.post("/users/check-phone", async (req, res) => {
     res.status(500).json({ message: "Ошибка при проверке номера", error });
   }
 });
+
+// 🔹 Создание нового пользователя
+app.post("/users", async (req, res) => {
+  try {
+    const { name, phone, password, role } = req.body;
+
+    if (!name || !phone || !password) {
+      return res.status(400).json({ message: "Все поля обязательны" });
+    }
+
+    const existing = await User.findOne({ phone });
+    if (existing) {
+      return res.status(409).json({ message: "Пользователь с таким номером уже существует" });
+    }
+
+    const password_hash = await bcrypt.hash(password, 10);
+
+    const newUser = await User.create({ name, phone, role, password_hash });
+    res.status(201).json(newUser);
+  } catch (error) {
+    res.status(500).json({ message: "Ошибка при создании пользователя", error });
+  }
+});
+
+// 🔹 Обновление пользователя
+app.put("/users/:userId", async (req, res) => {
+  try {
+    const { name, phone, password, role } = req.body;
+
+    const updateData = { name, phone, role };
+    if (password) {
+      updateData.password_hash = await bcrypt.hash(password, 10);
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(req.params.userId, updateData, { new: true });
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "Пользователь не найден" });
+    }
+
+    res.json(updatedUser);
+  } catch (error) {
+    res.status(500).json({ message: "Ошибка при обновлении пользователя", error });
+  }
+});
+
+// 🔹 Удаление пользователя
+app.delete("/users/:userId", async (req, res) => {
+  try {
+    const deleted = await User.findByIdAndDelete(req.params.userId);
+    if (!deleted) {
+      return res.status(404).json({ message: "Пользователь не найден" });
+    }
+    res.json({ message: "Пользователь удалён" });
+  } catch (error) {
+    res.status(500).json({ message: "Ошибка при удалении пользователя", error });
+  }
+});
+
 
 // ===================== ЗАПУСК СЕРВЕРА =====================
 const PORT = process.env.PORT || 5000;
