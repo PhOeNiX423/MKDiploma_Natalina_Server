@@ -7,7 +7,7 @@ const app = express();
 
 app.use(
   cors({
-    origin: ["http://localhost:3000", "https://mkdiploma-natalina.vercel.app"], // ← список разрешённых источников
+    origin: ["http://localhost:3000", "https://mk-diploma-natalina-app.vercel.app"],
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type"],
   })
