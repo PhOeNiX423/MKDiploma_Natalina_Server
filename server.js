@@ -417,15 +417,22 @@ app.put("/users/:userId", async (req, res) => {
 // 🔹 Удаление пользователя
 app.delete("/users/:userId", async (req, res) => {
   try {
-    const deleted = await User.findByIdAndDelete(req.params.userId);
-    if (!deleted) {
+    const userToDelete = await User.findById(req.params.userId);
+    if (!userToDelete) {
       return res.status(404).json({ message: "Пользователь не найден" });
     }
+
+    if (userToDelete.role === "admin") {
+      const adminCount = await User.countDocuments({ role: "admin" });
+      if (adminCount === 1) {
+        return res.status(400).json({ message: "Нельзя удалить последнего администратора" });
+      }
+    }
+
+    const deleted = await User.findByIdAndDelete(req.params.userId);
     res.json({ message: "Пользователь удалён" });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Ошибка при удалении пользователя", error });
+    res.status(500).json({ message: "Ошибка при удалении пользователя", error });
   }
 });
 
