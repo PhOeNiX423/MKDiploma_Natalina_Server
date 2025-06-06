@@ -7,7 +7,10 @@ const app = express();
 
 app.use(
   cors({
-    origin: ["http://localhost:3000", "https://mk-diploma-natalina-app.vercel.app"],
+    origin: [
+      "http://localhost:3000",
+      "https://mk-diploma-natalina-app.vercel.app",
+    ],
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type"],
   })
@@ -44,16 +47,24 @@ const ProductSchema = new mongoose.Schema({
 const Product = mongoose.model("Product", ProductSchema, "Products");
 
 // ✅ Отзывы
-const ReviewSchema = new mongoose.Schema({
-  product_id: mongoose.Schema.Types.ObjectId,
-  user_id: mongoose.Schema.Types.ObjectId,
-  rating: Number,
-  comment: String,
-  created_at: {
-    type: Date,
-    default: Date.now,
+const ReviewSchema = new mongoose.Schema(
+  {
+    product_id: mongoose.Schema.Types.ObjectId,
+    user_id: mongoose.Schema.Types.ObjectId,
+    rating: Number,
+    comment: String,
+    status: {
+      type: String,
+      enum: ["на проверке", "опубликован"],
+      default: "на проверке",
+    },
+    created_at: {
+      type: Date,
+      default: Date.now,
+    },
   },
-});
+  { versionKey: false }
+);
 
 const Review = mongoose.model("Review", ReviewSchema, "Reviews");
 
@@ -181,7 +192,6 @@ app.post("/reviews", async (req, res) => {
   try {
     const { product_id, user_id, rating, comment } = req.body;
 
-    // Проверка, что отзыв от этого пользователя на этот товар уже существует
     const existingReview = await Review.findOne({ product_id, user_id });
     if (existingReview) {
       return res
@@ -194,25 +204,10 @@ app.post("/reviews", async (req, res) => {
       user_id,
       rating,
       comment,
+      status: "на проверке",
     });
 
-    const product = await Product.findById(product_id);
-    if (!product) {
-      return res.status(404).json({ message: "Продукт не найден" });
-    }
-
-    const totalRatings = product.ratings_count || 0;
-    const currentAvg = product.average_rating || 0;
-
-    const newCount = totalRatings + 1;
-    const newAvg = ((currentAvg * totalRatings + rating) / newCount).toFixed(2);
-
-    product.ratings_count = newCount;
-    product.average_rating = parseFloat(newAvg);
-
-    await product.save();
-
-    res.status(201).json({ message: "Отзыв добавлен", review: newReview });
+    res.status(201).json({ message: "Отзыв добавлен и ожидает модерации", review: newReview });
   } catch (error) {
     res.status(500).json({ message: "Ошибка при добавлении отзыва", error });
   }
@@ -375,7 +370,9 @@ app.post("/users", async (req, res) => {
 
     const existing = await User.findOne({ phone });
     if (existing) {
-      return res.status(409).json({ message: "Пользователь с таким номером уже существует" });
+      return res
+        .status(409)
+        .json({ message: "Пользователь с таким номером уже существует" });
     }
 
     const password_hash = await bcrypt.hash(password, 10);
@@ -383,7 +380,9 @@ app.post("/users", async (req, res) => {
     const newUser = await User.create({ name, phone, role, password_hash });
     res.status(201).json(newUser);
   } catch (error) {
-    res.status(500).json({ message: "Ошибка при создании пользователя", error });
+    res
+      .status(500)
+      .json({ message: "Ошибка при создании пользователя", error });
   }
 });
 
@@ -397,7 +396,11 @@ app.put("/users/:userId", async (req, res) => {
       updateData.password_hash = await bcrypt.hash(password, 10);
     }
 
-    const updatedUser = await User.findByIdAndUpdate(req.params.userId, updateData, { new: true });
+    const updatedUser = await User.findByIdAndUpdate(
+      req.params.userId,
+      updateData,
+      { new: true }
+    );
 
     if (!updatedUser) {
       return res.status(404).json({ message: "Пользователь не найден" });
@@ -405,7 +408,9 @@ app.put("/users/:userId", async (req, res) => {
 
     res.json(updatedUser);
   } catch (error) {
-    res.status(500).json({ message: "Ошибка при обновлении пользователя", error });
+    res
+      .status(500)
+      .json({ message: "Ошибка при обновлении пользователя", error });
   }
 });
 
@@ -418,18 +423,63 @@ app.delete("/users/:userId", async (req, res) => {
     }
     res.json({ message: "Пользователь удалён" });
   } catch (error) {
-    res.status(500).json({ message: "Ошибка при удалении пользователя", error });
+    res
+      .status(500)
+      .json({ message: "Ошибка при удалении пользователя", error });
   }
 });
 
 // 🔹 Обновление заказа
 app.put("/orders/:id", async (req, res) => {
   try {
-    const updated = await Order.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updated = await Order.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
     if (!updated) return res.status(404).json({ message: "Заказ не найден" });
     res.json(updated);
   } catch (error) {
     res.status(500).json({ message: "Ошибка при обновлении заказа", error });
+  }
+});
+
+// 🔹 Добавление отзыва
+app.put("/reviews/:id", async (req, res) => {
+  try {
+    const review = await Review.findById(req.params.id);
+    if (!review) return res.status(404).json({ message: "Отзыв не найден" });
+
+    const updatedReview = await Review.findByIdAndUpdate(req.params.id, req.body, { new: true });
+
+    // Если статус изменился на "опубликован", пересчитываем рейтинг
+    if (req.body.status === "опубликован") {
+      const approvedReviews = await Review.find({
+        product_id: review.product_id,
+        status: "опубликован",
+      });
+
+      const ratings = approvedReviews.map(r => r.rating);
+      const average = ratings.reduce((acc, r) => acc + r, 0) / ratings.length;
+
+      await Product.findByIdAndUpdate(review.product_id, {
+        average_rating: parseFloat(average.toFixed(2)),
+        ratings_count: ratings.length,
+      });
+    }
+
+    res.json({ message: "Отзыв обновлён", review: updatedReview });
+  } catch (error) {
+    res.status(500).json({ message: "Ошибка при обновлении отзыва", error });
+  }
+});
+
+// 🔹 Удаление отзыва
+app.delete("/reviews/:id", async (req, res) => {
+  try {
+    const deleted = await Review.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ message: "Отзыв не найден" });
+    res.json({ message: "Отзыв удалён" });
+  } catch (error) {
+    res.status(500).json({ message: "Ошибка при удалении отзыва", error });
   }
 });
 
